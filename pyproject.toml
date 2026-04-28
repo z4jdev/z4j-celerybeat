@@ -1,6 +1,6 @@
 [project]
 name = "z4j-celerybeat"
-version = "1.0.2"
+version = "1.1.0"
 description = "z4j Celery-beat scheduler adapter (Apache 2.0)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,8 +18,16 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "z4j-core>=1.0.2",
-    "z4j-bare>=1.0.3",
+    # Floors bumped to >=1.1.0 for the v1.1.0 ecosystem family
+    # release. The brain-side z4j-scheduler 1.1.0 takes over the
+    # "fire next tick" responsibility this adapter used to handle
+    # via celery-beat's own loop; this adapter still owns the
+    # schedule.enable / disable / trigger_now / delete CRUD path
+    # against the django-celery-beat tables. Aligned floors mean
+    # an operator who installs z4j-celerybeat 1.1.0 always gets
+    # the matching brain-side fix in z4j-bare 1.1.0.
+    "z4j-core>=1.1.0",
+    "z4j-bare>=1.1.0",
     "celery>=5.6.3",
 ]
 

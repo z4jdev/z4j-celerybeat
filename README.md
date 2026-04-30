@@ -7,7 +7,7 @@
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
 Surfaces periodic / crontab / one-shot Celery schedules on the
-dashboard's Schedules page — read, create, update, enable, disable,
+dashboard's Schedules page, read, create, update, enable, disable,
 trigger, delete. Supports both Celery's static `app.conf.beat_schedule`
 and the database-backed `django_celery_beat.models.PeriodicTask`.
 
@@ -25,7 +25,7 @@ and the database-backed `django_celery_beat.models.PeriodicTask`.
 | Live sync | django-celery-beat changes flow to the dashboard automatically |
 | Boot inventory | full snapshot at agent connect; existing schedules show up without editing |
 
-Static `beat_schedule` is read-only by design — you can view, enable,
+Static `beat_schedule` is read-only by design, you can view, enable,
 disable, and trigger, but create / update / delete need a deploy
 round-trip. The dashboard hides buttons it can't honor.
 
@@ -47,7 +47,7 @@ INSTALLED_APPS = [
 ```
 
 The Schedules page picks up every `PeriodicTask` row immediately. Edits
-flow both ways — dashboard changes write through to the database, and
+flow both ways, dashboard changes write through to the database, and
 changes written directly to the model surface via Django signals.
 
 ### With static `beat_schedule` (plain Celery)
@@ -77,14 +77,14 @@ install_agent(
 
 ## Pairs with
 
-- [`z4j-celery`](https://github.com/z4jdev/z4j-celery) — engine adapter
+- [`z4j-celery`](https://github.com/z4jdev/z4j-celery), engine adapter
 
 ## Reliability
 
 - No exception from the adapter ever propagates back to Celery Beat,
   Django request handlers, or `PeriodicTask` signal receivers.
 - Database writes for `PeriodicTask` happen in the dashboard's request
-  context with normal Django ORM semantics — even if the brain is
+  context with normal Django ORM semantics, even if the brain is
   unreachable, the local model write is never affected.
 
 ## Documentation
@@ -93,7 +93,7 @@ Full docs at [z4j.dev/schedulers/celery-beat/](https://z4j.dev/schedulers/celery
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+Apache-2.0, see [LICENSE](LICENSE).
 
 ## Links
 

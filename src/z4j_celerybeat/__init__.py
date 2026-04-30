@@ -16,7 +16,7 @@ from __future__ import annotations
 from z4j_celerybeat.scheduler import CeleryBeatSchedulerAdapter
 from z4j_celerybeat.sources import DjangoCeleryBeatSource, StaticBeatScheduleSource
 
-__version__ = "1.1.0"
+__version__ = "1.3.0"
 
 __all__ = [
     "CeleryBeatSchedulerAdapter",

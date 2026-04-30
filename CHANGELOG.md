@@ -1,46 +1,33 @@
 # Changelog
 
-All notable changes to `z4j-celerybeat` are documented in this file.
+All notable changes to this package are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-15
+
+**Aligned with the z4j 1.3.0 ecosystem reset.**
+
+z4j 1.3.0 is a clean-slate reset of the 1.x ecosystem. All prior
+1.x versions on PyPI (1.0.x, 1.1.x, 1.2.x) are yanked — they
+remain installable by exact pin but `pip install` no longer
+selects them.
+
+### Changed
+
+- Bumped to 1.3.0 to match the rest of the z4j wave.
+- `z4j-core` and `z4j-bare` dependency floors bumped to `>=1.3.0,<2`.
+
+### Compatibility
+
+- Compatible with `z4j-core>=1.3.0,<2` and `z4j-bare>=1.3.0,<2`.
+- The engine integration surface (Celery / RQ / arq / dramatiq /
+  huey / taskiq / apscheduler / scheduler) is unchanged from
+  1.2.x — adapter callers don't need code changes.
+
+### See also
+
+- `CHANGELOG-1.x-legacy.md` for the 1.0/1.1/1.2 release history.
+
 ## [Unreleased]
-
-## [1.1.0] - 2026-04-28
-
-### Changed
-
-- **v1.1.0 ecosystem family bump.** Pinned ``z4j-core>=1.1.0`` and ``z4j-bare>=1.1.0`` so a celery-beat scheduler adapter installed at 1.1.0 always resolves a known-good 1.1.0 slice of brain + agent. The brain-side z4j-scheduler 1.1.0 now takes over the "fire next tick" responsibility this adapter used to share with celery-beat's own loop; this adapter still owns the schedule CRUD path against the django-celery-beat tables. The matching dispatcher fix in z4j-bare 1.1.0 (route ``schedule.fire`` to the queue engine instead of the scheduler adapter) closes the loop so brain-side ticks reach the engine end-to-end.
-
-## [1.0.1] - 2026-04-21
-
-### Changed
-
-- Lowered minimum Python version from 3.13 to 3.11. This package now supports Python 3.11, 3.12, 3.13, and 3.14.
-- Documentation polish: standardized on ASCII hyphens across README, CHANGELOG, and docstrings for consistent rendering on PyPI.
-
-
-## [1.0.0] - 2026-04
-
-### Added
-
-<!--
-TODO: describe what ships in this first public release. One bullet per
-capability. Examples:
-- First public release.
-- <Headline feature>
-- <Second feature>
-- N unit tests.
--->
-
-- First public release.
-
-## Links
-
-- Repository: <https://github.com/z4jdev/z4j-celerybeat>
-- Issues: <https://github.com/z4jdev/z4j-celerybeat/issues>
-- PyPI: <https://pypi.org/project/z4j-celerybeat/>
-
-[Unreleased]: https://github.com/z4jdev/z4j-celerybeat/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/z4jdev/z4j-celerybeat/releases/tag/v1.0.0

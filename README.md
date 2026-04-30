@@ -6,10 +6,28 @@
 
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
-Surfaces periodic / crontab / one-shot schedules on the
-dashboard's Schedules page — read, create, update, enable,
-disable, trigger, delete. Supports both `app.conf.beat_schedule`
-and django-celery-beat.
+Surfaces periodic / crontab / one-shot Celery schedules on the
+dashboard's Schedules page — read, create, update, enable, disable,
+trigger, delete. Supports both Celery's static `app.conf.beat_schedule`
+and the database-backed `django_celery_beat.models.PeriodicTask`.
+
+## What it ships
+
+| Capability | Notes |
+|---|---|
+| List schedules | from both static config and django-celery-beat |
+| Read individual schedule | by id |
+| Create schedule | django-celery-beat backend (static is read-only) |
+| Update | interval / crontab / args / kwargs / enabled flag |
+| Enable / disable | via `is_enabled` toggle |
+| Trigger now | fires the underlying task immediately, outside the schedule |
+| Delete | django-celery-beat backend |
+| Live sync | django-celery-beat changes flow to the dashboard automatically |
+| Boot inventory | full snapshot at agent connect; existing schedules show up without editing |
+
+Static `beat_schedule` is read-only by design — you can view, enable,
+disable, and trigger, but create / update / delete need a deploy
+round-trip. The dashboard hides buttons it can't honor.
 
 ## Install
 
@@ -17,9 +35,57 @@ and django-celery-beat.
 pip install z4j-celery z4j-celerybeat
 ```
 
+### With django-celery-beat (most Django projects)
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    "django_celery_beat",
+    "z4j_django",
+]
+```
+
+The Schedules page picks up every `PeriodicTask` row immediately. Edits
+flow both ways — dashboard changes write through to the database, and
+changes written directly to the model surface via Django signals.
+
+### With static `beat_schedule` (plain Celery)
+
+```python
+from celery import Celery
+from z4j_bare import install_agent
+from z4j_celery import CeleryEngineAdapter
+from z4j_celerybeat import CeleryBeatAdapter
+
+app = Celery("myproject", broker="redis://localhost")
+app.conf.beat_schedule = {
+    "cleanup-every-5-minutes": {
+        "task": "myapp.tasks.cleanup",
+        "schedule": 300.0,
+    },
+}
+
+install_agent(
+    engines=[CeleryEngineAdapter(celery_app=app)],
+    schedulers=[CeleryBeatAdapter(celery_app=app)],
+    brain_url="https://brain.example.com",
+    token="z4j_agent_...",
+    project_id="my-project",
+)
+```
+
 ## Pairs with
 
 - [`z4j-celery`](https://github.com/z4jdev/z4j-celery) — engine adapter
+
+## Reliability
+
+- No exception from the adapter ever propagates back to Celery Beat,
+  Django request handlers, or `PeriodicTask` signal receivers.
+- Database writes for `PeriodicTask` happen in the dashboard's request
+  context with normal Django ORM semantics — even if the brain is
+  unreachable, the local model write is never affected.
 
 ## Documentation
 

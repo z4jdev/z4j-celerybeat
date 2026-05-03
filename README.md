@@ -84,7 +84,7 @@ install_agent(
 - No exception from the adapter ever propagates back to Celery Beat,
   Django request handlers, or `PeriodicTask` signal receivers.
 - Database writes for `PeriodicTask` happen in the dashboard's request
-  context with normal Django ORM semantics, even if the brain is
+  context with normal Django ORM semantics, even if z4j is
   unreachable, the local model write is never affected.
 
 ## Documentation

@@ -1,8 +1,8 @@
 # z4j-celerybeat
 
-[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg)](https://pypi.org/project/z4j-celerybeat/)
-[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg)](https://pypi.org/project/z4j-celerybeat/)
-[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.4.0)](https://pypi.org/project/z4j-celerybeat/)
+[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.4.0)](https://pypi.org/project/z4j-celerybeat/)
+[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.4.0)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
 
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 

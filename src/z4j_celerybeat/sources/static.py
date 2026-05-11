@@ -20,7 +20,7 @@ from z4j_core.models import CommandResult, Schedule
 
 from z4j_celerybeat.mapper import map_static_entry
 
-logger = logging.getLogger("z4j.agent.celerybeat.sources.static")
+logger = logging.getLogger("z4j.adapter.celerybeat.sources.static")
 
 
 class StaticBeatScheduleSource:

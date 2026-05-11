@@ -21,7 +21,7 @@ from z4j_bare.safety import safe_boundary
 
 from z4j_celerybeat.mapper import map_periodic_task
 
-logger = logging.getLogger("z4j.agent.celerybeat.signals")
+logger = logging.getLogger("z4j.adapter.celerybeat.signals")
 
 ScheduleEventSink = Callable[[str, Any], None]
 """Callback the signals invoke when a schedule changes.

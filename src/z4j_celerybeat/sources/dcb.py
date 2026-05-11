@@ -23,7 +23,7 @@ from z4j_core.models import CommandResult, Schedule, ScheduleKind
 
 from z4j_celerybeat.mapper import map_periodic_task
 
-logger = logging.getLogger("z4j.agent.celerybeat.sources.dcb")
+logger = logging.getLogger("z4j.adapter.celerybeat.sources.dcb")
 
 
 class DjangoCeleryBeatSource:

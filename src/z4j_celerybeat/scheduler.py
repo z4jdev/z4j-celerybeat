@@ -21,7 +21,7 @@ from z4j_celerybeat.capabilities import DEFAULT_CAPABILITIES
 from z4j_celerybeat.signals import CeleryBeatSignalHooks
 from z4j_celerybeat.sources import DjangoCeleryBeatSource, StaticBeatScheduleSource
 
-logger = logging.getLogger("z4j.agent.celerybeat.scheduler")
+logger = logging.getLogger("z4j.adapter.celerybeat.scheduler")
 
 _NAME = "celery-beat"
 

@@ -1,8 +1,8 @@
 # z4j-celerybeat
 
-[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.4.0)](https://pypi.org/project/z4j-celerybeat/)
-[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.4.0)](https://pypi.org/project/z4j-celerybeat/)
-[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.4.0)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.6.7)](https://pypi.org/project/z4j-celerybeat/)
+[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.6.7)](https://pypi.org/project/z4j-celerybeat/)
+[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.6.7)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
 
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
@@ -10,6 +10,14 @@ Surfaces periodic / crontab / one-shot Celery schedules on the
 dashboard's Schedules page, read, create, update, enable, disable,
 trigger, delete. Supports both Celery's static `app.conf.beat_schedule`
 and the database-backed `django_celery_beat.models.PeriodicTask`.
+
+## Compatibility
+
+- Celery 5.3+ (no upper cap)
+- django-celery-beat 2.5+ (for the writable backend)
+- Python 3.10+
+
+Full per-adapter matrix at <https://z4j.dev/reference/compatibility/>.
 
 ## What it ships
 

@@ -1,16 +1,18 @@
 [project]
 name = "z4j-celerybeat"
-version = "1.6.0"
+version = "1.6.7"
 description = "z4j Celery-beat scheduler adapter (Apache 2.0)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "z4j contributors" }]
 keywords = ["z4j", "celery", "celery-beat", "scheduler"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
+    "Framework :: Celery",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -28,11 +30,23 @@ dependencies = [
     # the matching brain-side fix in z4j-bare 1.1.0.
     "z4j-core>=1.4.0,<2",
     "z4j-bare>=1.4.0,<2",
-    "celery>=5.6.3",
+    # Celery compatibility policy: operator-chosen primary, wide
+    # range. We only read beat_schedule entries and Schedule.entries
+    # projections plus app.send_task - all stable since 5.0. 5.3 is
+    # the dominant LTS-era deployment and the practical floor for an
+    # operator picking the scheduler side. Per z4j supply-chain
+    # policy, the operator owns Celery's security posture.
+    "celery>=5.3",
 ]
 
 [project.optional-dependencies]
-django = ["django-celery-beat>=2.9.0"]
+# django-celery-beat compatibility policy: operator-chosen primary,
+# wide range. We only read PeriodicTask and the four schedule
+# classes (IntervalSchedule, CrontabSchedule, ClockedSchedule,
+# SolarSchedule). All four exist since 2.5. The previous >=2.9
+# floor excluded operators on Django 4.2 / older django-celery-beat
+# lines for no functional reason.
+django = ["django-celery-beat>=2.5"]
 
 [project.urls]
 Changelog = "https://github.com/z4jdev/z4j-celerybeat/blob/main/CHANGELOG.md"

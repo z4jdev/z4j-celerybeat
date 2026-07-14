@@ -65,7 +65,7 @@ class CeleryBeatSignalHooks:
         try:
             from django.db.models.signals import post_delete, post_save
             from django_celery_beat.models import PeriodicTask  # type: ignore[import-not-found]
-        except Exception:  # noqa: BLE001
+        except Exception:
             # ImportError: django or django-celery-beat not installed
             # ImproperlyConfigured: Django installed but not configured
             #   (common in Flask/FastAPI environments that share a venv)
@@ -114,10 +114,8 @@ class CeleryBeatSignalHooks:
                 # cursor without loading the full queryset into RAM.
                 # ``only(...)`` keeps us from pulling JSON columns we
                 # do not use during the map.
-                qs = (
-                    periodic_task_model.objects
-                    .filter(enabled=True)
-                    .iterator(chunk_size=self._SYNC_CHUNK_SIZE)
+                qs = periodic_task_model.objects.filter(enabled=True).iterator(
+                    chunk_size=self._SYNC_CHUNK_SIZE
                 )
                 count = 0
                 in_chunk = 0
@@ -127,7 +125,7 @@ class CeleryBeatSignalHooks:
                         self.sink("created", schedule)
                         count += 1
                         in_chunk += 1
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: S110  best-effort per-task sync
                         pass
                     if in_chunk >= self._SYNC_CHUNK_SIZE:
                         _time.sleep(self._SYNC_CHUNK_PAUSE_SECONDS)
@@ -137,7 +135,7 @@ class CeleryBeatSignalHooks:
                         "z4j celerybeat: synced %d existing schedules",
                         count,
                     )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("z4j celerybeat: initial sync failed")
 
         thread = threading.Thread(target=_do_sync, daemon=True)
@@ -155,7 +153,7 @@ class CeleryBeatSignalHooks:
         for signal, handler in self._handlers:
             try:
                 signal.disconnect(handler, sender=PeriodicTask)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("error disconnecting celerybeat signal handler")
         self._handlers.clear()
         self._connected = False
@@ -171,16 +169,18 @@ class CeleryBeatSignalHooks:
     #: not change. Suppressing them avoids flooding the dashboard
     #: with "schedule updated" toasts every time a beat tick fires
     #: (audit medium ``celerybeat-last-run-at-reentry``).
-    _NOISE_ONLY_UPDATE_FIELDS: frozenset[str] = frozenset({
-        "last_run_at",
-        "total_run_count",
-        "date_changed",
-    })
+    _NOISE_ONLY_UPDATE_FIELDS: frozenset[str] = frozenset(
+        {
+            "last_run_at",
+            "total_run_count",
+            "date_changed",
+        }
+    )
 
     @safe_boundary
     def _on_save(
         self,
-        sender: Any = None,  # noqa: ARG002
+        sender: Any = None,
         instance: Any = None,
         created: bool = False,
         update_fields: Any = None,
@@ -203,7 +203,7 @@ class CeleryBeatSignalHooks:
                 return
         try:
             schedule = map_periodic_task(instance)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("z4j celerybeat: failed to map PeriodicTask")
             return
         action = "created" if created else "updated"
@@ -212,7 +212,7 @@ class CeleryBeatSignalHooks:
     @safe_boundary
     def _on_delete(
         self,
-        sender: Any = None,  # noqa: ARG002
+        sender: Any = None,
         instance: Any = None,
         **_: Any,
     ) -> None:
@@ -220,7 +220,7 @@ class CeleryBeatSignalHooks:
             return
         try:
             schedule = map_periodic_task(instance)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("z4j celerybeat: failed to map deleted PeriodicTask")
             return
         self.sink("deleted", schedule)

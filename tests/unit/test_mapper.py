@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
-from z4j_core.models import Schedule, ScheduleKind
 from z4j_celerybeat.mapper import map_periodic_task, map_static_entry
+from z4j_core.models import Schedule, ScheduleKind
 
 
 class TestMapPeriodicTaskInterval:

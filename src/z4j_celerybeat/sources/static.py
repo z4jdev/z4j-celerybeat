@@ -61,14 +61,11 @@ class StaticBeatScheduleSource:
             beat_schedule = self._celery_app.conf.beat_schedule or {}
         except AttributeError:
             return []
-        return [
-            map_static_entry(name, dict(entry))
-            for name, entry in beat_schedule.items()
-        ]
+        return [map_static_entry(name, dict(entry)) for name, entry in beat_schedule.items()]
 
     async def get_schedule(self, schedule_id: str) -> Schedule | None:
         for schedule in await self.list_schedules():
-            if schedule.external_id == schedule_id or schedule.name == schedule_id:
+            if schedule_id in {schedule.external_id, schedule.name}:
                 return schedule
         return None
 
@@ -76,27 +73,29 @@ class StaticBeatScheduleSource:
     # Write operations - all unsupported
     # ------------------------------------------------------------------
 
-    async def create_schedule(self, spec: Schedule) -> Schedule:  # noqa: ARG002
+    async def create_schedule(self, spec: Schedule) -> Schedule:
         raise NotImplementedError(
             "static beat_schedule entries cannot be created at runtime; "
             "edit celery_app.conf.beat_schedule in source code instead, "
             "or install django-celery-beat for editable schedules",
         )
 
-    async def update_schedule(  # noqa: ARG002
-        self, schedule_id: str, spec: Schedule,
+    async def update_schedule(
+        self,
+        schedule_id: str,
+        spec: Schedule,
     ) -> Schedule:
         raise NotImplementedError(
             "static beat_schedule entries are read-only",
         )
 
-    async def delete_schedule(self, schedule_id: str) -> CommandResult:  # noqa: ARG002
+    async def delete_schedule(self, schedule_id: str) -> CommandResult:
         return CommandResult(
             status="failed",
             error="static beat_schedule entries are read-only",
         )
 
-    async def set_enabled(  # noqa: ARG002
+    async def set_enabled(
         self,
         schedule_id: str,
         enabled: bool,

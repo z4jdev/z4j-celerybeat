@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
-from z4j_core.models import CommandResult, Schedule, ScheduleKind
 from z4j_celerybeat.sources.static import StaticBeatScheduleSource
+from z4j_core.models import CommandResult, Schedule, ScheduleKind
 
 
 class TestAvailability:

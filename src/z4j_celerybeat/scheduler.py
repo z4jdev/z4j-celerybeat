@@ -88,7 +88,7 @@ class CeleryBeatSchedulerAdapter:
         for source in self.sources:
             try:
                 items = await source.list_schedules()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception(
                     "z4j celerybeat: source %s failed to list schedules",
                     getattr(source, "name", type(source).__name__),
@@ -106,7 +106,7 @@ class CeleryBeatSchedulerAdapter:
         for source in self.sources:
             try:
                 schedule = await source.get_schedule(schedule_id)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception(
                     "z4j celerybeat: source %s failed to get schedule",
                     getattr(source, "name", type(source).__name__),
@@ -221,7 +221,7 @@ class CeleryBeatSchedulerAdapter:
                 args=schedule.args,
                 kwargs=schedule.kwargs,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return CommandResult(
                 status="failed",
                 error=f"send_task failed: {exc}",
@@ -249,7 +249,7 @@ def _supports_writes(source: Any) -> bool:
         return True
     try:
         return bool(is_available())
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 

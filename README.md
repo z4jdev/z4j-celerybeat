@@ -1,8 +1,8 @@
 # z4j-celerybeat
 
-[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.6.7)](https://pypi.org/project/z4j-celerybeat/)
-[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.6.7)](https://pypi.org/project/z4j-celerybeat/)
-[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.6.7)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.7.0)](https://pypi.org/project/z4j-celerybeat/)
+[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.7.0)](https://pypi.org/project/z4j-celerybeat/)
+[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.7.0)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
 
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
@@ -15,7 +15,7 @@ and the database-backed `django_celery_beat.models.PeriodicTask`.
 
 - Celery 5.3+ (no upper cap)
 - django-celery-beat 2.5+ (for the writable backend)
-- Python 3.10+
+- Python 3.11+
 
 Full per-adapter matrix at <https://z4j.dev/reference/compatibility/>.
 
@@ -33,9 +33,10 @@ Full per-adapter matrix at <https://z4j.dev/reference/compatibility/>.
 | Live sync | django-celery-beat changes flow to the dashboard automatically |
 | Boot inventory | full snapshot at agent connect; existing schedules show up without editing |
 
-Static `beat_schedule` is read-only by design, you can view, enable,
-disable, and trigger, but create / update / delete need a deploy
-round-trip. The dashboard hides buttons it can't honor.
+Static `beat_schedule` is read-only by design, you can view and
+trigger, but create / update / delete / enable / disable all need
+django-celery-beat (or a source-code edit and deploy round-trip). The
+dashboard hides buttons it can't honor.
 
 ## Install
 
@@ -64,7 +65,7 @@ changes written directly to the model surface via Django signals.
 from celery import Celery
 from z4j_bare import install_agent
 from z4j_celery import CeleryEngineAdapter
-from z4j_celerybeat import CeleryBeatAdapter
+from z4j_celerybeat import CeleryBeatSchedulerAdapter
 
 app = Celery("myproject", broker="redis://localhost")
 app.conf.beat_schedule = {
@@ -76,7 +77,7 @@ app.conf.beat_schedule = {
 
 install_agent(
     engines=[CeleryEngineAdapter(celery_app=app)],
-    schedulers=[CeleryBeatAdapter(celery_app=app)],
+    schedulers=[CeleryBeatSchedulerAdapter(celery_app=app)],
     brain_url="https://brain.example.com",
     token="z4j_agent_...",
     project_id="my-project",

@@ -47,7 +47,7 @@ class DjangoCeleryBeatSource:
         """Return True if django-celery-beat is importable and Django is configured."""
         try:
             from django_celery_beat import models  # type: ignore[import-not-found]
-        except (ImportError, Exception):  # noqa: BLE001
+        except (ImportError, Exception):
             # ImportError: django-celery-beat not installed
             # Exception: Django not configured (ImproperlyConfigured) or
             #            other setup errors. Safe to catch broadly here
@@ -69,7 +69,10 @@ class DjangoCeleryBeatSource:
         models = self._models
         rows = list(
             models.PeriodicTask.objects.select_related(
-                "interval", "crontab", "clocked", "solar",
+                "interval",
+                "crontab",
+                "clocked",
+                "solar",
             ).all(),
         )
         return [map_periodic_task(row) for row in rows]
@@ -82,7 +85,10 @@ class DjangoCeleryBeatSource:
     def _get_schedule_sync(self, schedule_id: str) -> Schedule | None:
         models = self._models
         qs = models.PeriodicTask.objects.select_related(
-            "interval", "crontab", "clocked", "solar",
+            "interval",
+            "crontab",
+            "clocked",
+            "solar",
         )
         # Try by name first (brain sends schedule name), then by pk.
         try:

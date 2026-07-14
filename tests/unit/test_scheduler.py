@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import pytest
-
+from z4j_celerybeat.capabilities import DEFAULT_CAPABILITIES
+from z4j_celerybeat.scheduler import CeleryBeatSchedulerAdapter
 from z4j_core.errors import NotFoundError
 from z4j_core.models import CommandResult, Schedule, ScheduleKind
 from z4j_core.protocols import SchedulerAdapter
-from z4j_celerybeat.capabilities import DEFAULT_CAPABILITIES
-from z4j_celerybeat.scheduler import CeleryBeatSchedulerAdapter
 
 
 class FakeWritableSource:
@@ -69,19 +68,23 @@ class FakeReadOnlySource:
                 return s
         return None
 
-    async def create_schedule(self, spec: Schedule) -> Schedule:  # noqa: ARG002
+    async def create_schedule(self, spec: Schedule) -> Schedule:
         raise NotImplementedError
 
-    async def update_schedule(  # noqa: ARG002
-        self, schedule_id: str, spec: Schedule,
+    async def update_schedule(
+        self,
+        schedule_id: str,
+        spec: Schedule,
     ) -> Schedule:
         raise NotImplementedError
 
-    async def delete_schedule(self, schedule_id: str) -> CommandResult:  # noqa: ARG002
+    async def delete_schedule(self, schedule_id: str) -> CommandResult:
         return CommandResult(status="failed", error="read-only")
 
-    async def set_enabled(  # noqa: ARG002
-        self, schedule_id: str, enabled: bool,
+    async def set_enabled(
+        self,
+        schedule_id: str,
+        enabled: bool,
     ) -> CommandResult:
         return CommandResult(status="failed", error="read-only")
 

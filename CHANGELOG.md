@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.0 (2026-07-23)
+
+* `trigger_now` offloads its broker I/O off the agent loop so a broker incident can no longer freeze it; a timed-out mutation is reported indeterminate.
+* Part of the coordinated 1.8.0 fleet release (unified fleet version, green lint/format/import-boundary gate).
+
 ## 1.7.0 (2026-07-07)
 
 * README corrected to the real `CeleryBeatSchedulerAdapter` API.

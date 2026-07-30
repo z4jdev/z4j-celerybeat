@@ -13,7 +13,6 @@ just because the user does not use django-celery-beat.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any
@@ -21,7 +20,19 @@ from typing import Any
 from z4j_core.errors import ConflictError, NotFoundError
 from z4j_core.models import CommandResult, Schedule, ScheduleKind
 
+from z4j_celerybeat._offload import (
+    OffloadTimeoutError,
+    indeterminate_timeout_result,
+    offload,
+)
 from z4j_celerybeat.mapper import map_periodic_task
+
+#: M4: DCB Django-ORM I/O runs on the dedicated bounded offload pool (not
+#: the shared default executor via asyncio.to_thread) under a timeout, so a
+#: slow DB cannot starve the agent's heartbeat/reconnect threads. On timeout
+#: offload raises OffloadTimeoutError (the op did not complete) rather than
+#: hanging the loop forever.
+_DCB_OFFLOAD_TIMEOUT = 15.0
 
 logger = logging.getLogger("z4j.adapter.celerybeat.sources.dcb")
 
@@ -63,7 +74,7 @@ class DjangoCeleryBeatSource:
     async def list_schedules(self) -> list[Schedule]:
         if not self.is_available():
             return []
-        return await asyncio.to_thread(self._list_schedules_sync)
+        return await offload(self._list_schedules_sync, timeout=_DCB_OFFLOAD_TIMEOUT)
 
     def _list_schedules_sync(self) -> list[Schedule]:
         models = self._models
@@ -80,7 +91,7 @@ class DjangoCeleryBeatSource:
     async def get_schedule(self, schedule_id: str) -> Schedule | None:
         if not self.is_available():
             return None
-        return await asyncio.to_thread(self._get_schedule_sync, schedule_id)
+        return await offload(self._get_schedule_sync, schedule_id, timeout=_DCB_OFFLOAD_TIMEOUT)
 
     def _get_schedule_sync(self, schedule_id: str) -> Schedule | None:
         models = self._models
@@ -109,7 +120,21 @@ class DjangoCeleryBeatSource:
             raise NotFoundError(
                 "django-celery-beat is not installed; cannot create schedules",
             )
-        return await asyncio.to_thread(self._create_schedule_sync, spec)
+        try:
+            return await offload(self._create_schedule_sync, spec, timeout=_DCB_OFFLOAD_TIMEOUT)
+        except OffloadTimeoutError:
+            # RM4: create_schedule must return a Schedule, so it cannot carry an
+            # indeterminate CommandResult; a timeout propagates as the explicit
+            # "did-not-complete" signal (the reconciler retries next cycle, and
+            # the create is guarded by an exists() check so a re-run is a no-op).
+            # Log it so a write that later commits is not silently a bare timeout.
+            logger.warning(
+                "z4j celerybeat: create_schedule %r timed out after %ss; the row "
+                "may still have been committed and will reconcile on the next sync",
+                spec.name,
+                _DCB_OFFLOAD_TIMEOUT,
+            )
+            raise
 
     def _create_schedule_sync(self, spec: Schedule) -> Schedule:
         models = self._models
@@ -136,7 +161,22 @@ class DjangoCeleryBeatSource:
             raise NotFoundError(
                 "django-celery-beat is not installed; cannot update schedules",
             )
-        return await asyncio.to_thread(self._update_schedule_sync, schedule_id, spec)
+        try:
+            return await offload(
+                self._update_schedule_sync, schedule_id, spec, timeout=_DCB_OFFLOAD_TIMEOUT
+            )
+        except OffloadTimeoutError:
+            # RM4: update_schedule must return a Schedule (no indeterminate
+            # CommandResult channel); a timeout propagates as the explicit
+            # "did-not-complete" signal. The update is idempotent (it re-applies
+            # the same spec), so the reconciler safely retries next cycle.
+            logger.warning(
+                "z4j celerybeat: update_schedule %r timed out after %ss; the row "
+                "may still have been committed and will reconcile on the next sync",
+                schedule_id,
+                _DCB_OFFLOAD_TIMEOUT,
+            )
+            raise
 
     def _resolve_periodic_task(self, schedule_id: str) -> object:
         """Look up a PeriodicTask by name or pk."""
@@ -172,7 +212,19 @@ class DjangoCeleryBeatSource:
     async def delete_schedule(self, schedule_id: str) -> CommandResult:
         if not self.is_available():
             return CommandResult(status="success")
-        return await asyncio.to_thread(self._delete_schedule_sync, schedule_id)
+        try:
+            return await offload(
+                self._delete_schedule_sync, schedule_id, timeout=_DCB_OFFLOAD_TIMEOUT
+            )
+        except OffloadTimeoutError:
+            # RM4: a DELETE that exceeds the timeout may still commit on the DB.
+            # Reporting a clean "failed" would invite the operator to repeat a
+            # mutation whose outcome is unknown; surface it as indeterminate.
+            return indeterminate_timeout_result(
+                "delete_schedule",
+                _DCB_OFFLOAD_TIMEOUT,
+                hint="the schedule may still have been deleted",
+            )
 
     def _delete_schedule_sync(self, schedule_id: str) -> CommandResult:
         models = self._models
@@ -191,7 +243,19 @@ class DjangoCeleryBeatSource:
                 status="failed",
                 error="django-celery-beat is not installed",
             )
-        return await asyncio.to_thread(self._set_enabled_sync, schedule_id, enabled)
+        try:
+            return await offload(
+                self._set_enabled_sync, schedule_id, enabled, timeout=_DCB_OFFLOAD_TIMEOUT
+            )
+        except OffloadTimeoutError:
+            # RM4: an enabled-toggle that exceeds the timeout may still commit;
+            # report indeterminate rather than a definitive failure the operator
+            # would blindly retry.
+            return indeterminate_timeout_result(
+                "set_enabled",
+                _DCB_OFFLOAD_TIMEOUT,
+                hint=f"the enabled={enabled} toggle may still have landed",
+            )
 
     def _set_enabled_sync(self, schedule_id: str, enabled: bool) -> CommandResult:
         models = self._models

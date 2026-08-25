@@ -7,8 +7,8 @@ startup.
 
 Static schedules cannot be modified at runtime - that's just how
 Celery works. The source therefore implements only the read
-operations; create/update/delete return failed
-:class:`CommandResult` with a clear explanation.
+operations. Create and update raise :class:`NotImplementedError`;
+delete and enable/disable return a failed :class:`CommandResult`.
 """
 
 from __future__ import annotations

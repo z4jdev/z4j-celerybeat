@@ -1,8 +1,8 @@
 # z4j-celerybeat
 
-[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg?v=1.8.0)](https://pypi.org/project/z4j-celerybeat/)
-[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg?v=1.8.0)](https://pypi.org/project/z4j-celerybeat/)
-[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg?v=1.8.0)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/z4j-celerybeat.svg)](https://pypi.org/project/z4j-celerybeat/)
+[![Python](https://img.shields.io/pypi/pyversions/z4j-celerybeat.svg)](https://pypi.org/project/z4j-celerybeat/)
+[![License](https://img.shields.io/pypi/l/z4j-celerybeat.svg)](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE)
 
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
@@ -27,10 +27,10 @@ Full per-adapter matrix at <https://z4j.dev/reference/compatibility/>.
 | Read individual schedule | by id |
 | Create schedule | django-celery-beat backend (static is read-only) |
 | Update | interval / crontab / args / kwargs / enabled flag |
-| Enable / disable | via `is_enabled` toggle |
+| Enable / disable | via the `PeriodicTask.enabled` field |
 | Trigger now | fires the underlying task immediately, outside the schedule |
 | Delete | django-celery-beat backend |
-| Live sync | django-celery-beat changes flow to the dashboard automatically |
+| Live sync | in-process django-celery-beat saves/deletes are reported best-effort through Django signals; periodic snapshots reconcile the source |
 | Boot inventory | full snapshot at agent connect; existing schedules show up without editing |
 
 Static `beat_schedule` is read-only by design, you can view and
@@ -55,13 +55,17 @@ INSTALLED_APPS = [
 ]
 ```
 
-The Schedules page picks up every `PeriodicTask` row immediately. Edits
-flow both ways, dashboard changes write through to the database, and
-changes written directly to the model surface via Django signals.
+After the agent connects, its inventory snapshot includes existing
+`PeriodicTask` rows. Dashboard changes write through to the database. Saves
+and deletes in a process where the adapter's hooks are connected are reported
+best-effort through Django signals; later inventory snapshots reconcile the
+database source as well.
 
 ### With static `beat_schedule` (plain Celery)
 
 ```python
+import os
+
 from celery import Celery
 from z4j_bare import install_agent
 from z4j_celery import CeleryEngineAdapter
@@ -81,6 +85,7 @@ install_agent(
     brain_url="https://brain.example.com",
     token="z4j_agent_...",
     project_id="my-project",
+    hmac_secret=os.environ["Z4J_HMAC_SECRET"],
 )
 ```
 
@@ -90,11 +95,12 @@ install_agent(
 
 ## Reliability
 
-- No exception from the adapter ever propagates back to Celery Beat,
-  Django request handlers, or `PeriodicTask` signal receivers.
-- Database writes for `PeriodicTask` happen in the dashboard's request
-  context with normal Django ORM semantics, even if z4j is
-  unreachable, the local model write is never affected.
+- Direct application writes to `PeriodicTask` keep normal Django ORM
+  semantics; reporting their post-save/post-delete signals to z4j is
+  best-effort and does not roll back those writes.
+- Dashboard controls execute in the agent process through the Django ORM. A
+  mutation that exceeds its 10-second timeout is reported as indeterminate
+  because its worker thread may still commit it.
 
 ## Documentation
 

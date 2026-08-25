@@ -1,9 +1,8 @@
 """Live-sync of django-celery-beat schedules to the brain.
 
-Hooks ``post_save`` and ``post_delete`` on ``PeriodicTask`` so that
-when a user creates, updates, or deletes a schedule via Django
-admin (or any other code path that touches the ORM), the change
-appears in the z4j dashboard within ~1 second.
+Hooks ``post_save`` and ``post_delete`` on ``PeriodicTask``. When one
+of those signals fires and the row can be mapped, the hook invokes the
+configured schedule-event sink.
 
 Connection is OPTIONAL - only happens if django-celery-beat is
 installed AND the scheduler adapter explicitly calls
@@ -81,29 +80,22 @@ class CeleryBeatSignalHooks:
         self._connected = True
         logger.info("z4j celerybeat signal hooks connected")
 
-        # Initial sync: report all existing schedules to the brain.
-        # This catches schedules created before z4j was enabled.
+        # Initial sync: emit existing enabled schedules through the configured sink.
         self._sync_existing(PeriodicTask)
 
         return True
 
-    #: Initial-sync chunk size. We pace the initial-sync stream so a
-    #: project with thousands of schedules does not blast the agent's
-    #: bounded outbound buffer (audit medium #celerybeat-sync-flood).
-    #: 100 schedules per chunk + 50 ms inter-chunk pause = ~2 k
-    #: schedules/sec, well under the buffer's drain rate.
+    #: Initial-sync chunk size. The pause between chunks paces calls to
+    #: the sink instead of emitting the full queryset as one uninterrupted burst.
     _SYNC_CHUNK_SIZE: int = 100
     _SYNC_CHUNK_PAUSE_SECONDS: float = 0.05
 
     @safe_boundary
     def _sync_existing(self, periodic_task_model: Any) -> None:
-        """Report all existing enabled PeriodicTask rows as 'created'.
+        """Stream existing enabled PeriodicTask rows to the sink as ``"created"``.
 
-        Uses a background thread for the Django ORM query to avoid
-        SynchronousOnlyOperation when called from the async agent
-        runtime. Chunked + paced so a 10 000-schedule project does
-        not deluge the outbound buffer in one tick (audit
-        ``celerybeat-sync-flood``).
+        Runs the Django ORM query in a background thread. Rows are streamed
+        from the queryset and successfully mapped rows are emitted in paced chunks.
         """
         import threading
         import time as _time

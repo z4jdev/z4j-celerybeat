@@ -15,7 +15,11 @@ import logging
 from typing import Any
 
 from z4j_core.errors import NotFoundError
-from z4j_core.models import CommandResult, Schedule
+from z4j_core.models import (
+    CommandResult,
+    Schedule,
+    refuse_unimplemented_overlap,
+)
 
 from z4j_celerybeat._offload import (
     OffloadTimeoutError,
@@ -165,6 +169,18 @@ class CeleryBeatSchedulerAdapter:
     # ------------------------------------------------------------------
 
     async def create_schedule(self, spec: Schedule) -> Schedule:
+        # Refused HERE as well as in DjangoCeleryBeatSource, because
+        # ``sources=`` is a public constructor argument and
+        # ``DjangoCeleryBeatSource`` is an exported name: a caller can inject
+        # their own writable source, and a refusal that lives only in the
+        # built-in one sits BELOW the boundary they cross. Reproduced with an
+        # injected source that accepted ``skip`` and returned ``allow``.
+        #
+        # Both placements stay. This one covers every source; the one in the
+        # built-in source covers callers who use it directly, without the
+        # adapter.
+        refuse_unimplemented_overlap(getattr(spec, "overlap_policy", None))
+
         for source in self.sources:
             if not _supports_writes(source):
                 continue
@@ -178,6 +194,18 @@ class CeleryBeatSchedulerAdapter:
         )
 
     async def update_schedule(self, schedule_id: str, spec: Schedule) -> Schedule:
+        # Refused HERE as well as in DjangoCeleryBeatSource, because
+        # ``sources=`` is a public constructor argument and
+        # ``DjangoCeleryBeatSource`` is an exported name: a caller can inject
+        # their own writable source, and a refusal that lives only in the
+        # built-in one sits BELOW the boundary they cross. Reproduced with an
+        # injected source that accepted ``skip`` and returned ``allow``.
+        #
+        # Both placements stay. This one covers every source; the one in the
+        # built-in source covers callers who use it directly, without the
+        # adapter.
+        refuse_unimplemented_overlap(getattr(spec, "overlap_policy", None))
+
         for source in self.sources:
             if not _supports_writes(source):
                 continue

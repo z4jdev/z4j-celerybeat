@@ -1,6 +1,6 @@
 [project]
 name = "z4j-celerybeat"
-version = "1.8.0"
+version = "1.9.0"
 description = "z4j Celery-beat scheduler adapter (Apache 2.0)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,8 +27,8 @@ dependencies = [
     # against the django-celery-beat tables. Aligned floors mean
     # an operator who installs z4j-celerybeat 1.1.0 always gets
     # the matching brain-side fix in z4j-bare 1.1.0.
-    "z4j-core>=1.8.0,<2",
-    "z4j-bare>=1.8.0,<2",
+    "z4j-core>=1.9.0,<2",
+    "z4j-bare>=1.9.0,<2",
     # Celery compatibility policy: operator-chosen primary, wide
     # range. We only read beat_schedule entries and Schedule.entries
     # projections plus app.send_task - all stable since 5.0. 5.3 is
@@ -55,7 +55,7 @@ Issues = "https://github.com/z4jdev/z4j-celerybeat/issues"
 Source = "https://github.com/z4jdev/z4j-celerybeat"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

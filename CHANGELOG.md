@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.0 (2026-08-25)
+
+* No functional change. Version bumped as part of the coordinated 1.9.0 fleet release, so every package in a deployment agrees on its peers.
+
 ## 1.8.0 (2026-07-23)
 
 * `trigger_now` offloads its broker I/O off the agent loop so a broker incident can no longer freeze it; a timed-out mutation is reported indeterminate.

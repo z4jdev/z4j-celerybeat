@@ -18,7 +18,12 @@ import logging
 from typing import Any
 
 from z4j_core.errors import ConflictError, NotFoundError
-from z4j_core.models import CommandResult, Schedule, ScheduleKind
+from z4j_core.models import (
+    CommandResult,
+    Schedule,
+    ScheduleKind,
+    refuse_unimplemented_overlap,
+)
 
 from z4j_celerybeat._offload import (
     OffloadTimeoutError,
@@ -137,6 +142,23 @@ class DjangoCeleryBeatSource:
             raise
 
     def _create_schedule_sync(self, spec: Schedule) -> Schedule:
+        # THE enforceable refusal, as opposed to the model's.
+        #
+        # This source persists a Schedule's attributes and never serializes it,
+        # and django-celery-beat has no column for an overlap policy, so a spec
+        # carrying ``skip`` was written without it and mapped back as ``allow``:
+        # the caller asked for collision prevention, was told it was applied,
+        # and got concurrent runs.
+        #
+        # z4j-core refuses the same value, but every guard available there sits
+        # on a hook a subclass can override -- validator, serializer, copy,
+        # model_construct, subclass default, model_post_init -- and a caller
+        # who overrides one reaches this function with ``skip`` intact. That is
+        # not a hole to be plugged with an eighth hook; it is what a Python
+        # class is. The boundary that can actually hold is the one the caller
+        # does not own, which is here.
+        refuse_unimplemented_overlap(getattr(spec, "overlap_policy", None))
+
         models = self._models
         if models.PeriodicTask.objects.filter(name=spec.name).exists():
             raise ConflictError(
@@ -191,6 +213,23 @@ class DjangoCeleryBeatSource:
             raise NotFoundError(f"schedule {schedule_id!r} not found") from exc
 
     def _update_schedule_sync(self, schedule_id: str, spec: Schedule) -> Schedule:
+        # THE enforceable refusal, as opposed to the model's.
+        #
+        # This source persists a Schedule's attributes and never serializes it,
+        # and django-celery-beat has no column for an overlap policy, so a spec
+        # carrying ``skip`` was written without it and mapped back as ``allow``:
+        # the caller asked for collision prevention, was told it was applied,
+        # and got concurrent runs.
+        #
+        # z4j-core refuses the same value, but every guard available there sits
+        # on a hook a subclass can override -- validator, serializer, copy,
+        # model_construct, subclass default, model_post_init -- and a caller
+        # who overrides one reaches this function with ``skip`` intact. That is
+        # not a hole to be plugged with an eighth hook; it is what a Python
+        # class is. The boundary that can actually hold is the one the caller
+        # does not own, which is here.
+        refuse_unimplemented_overlap(getattr(spec, "overlap_policy", None))
+
         row = self._resolve_periodic_task(schedule_id)
 
         # Detach old related schedule.

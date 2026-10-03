@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.0 (2026-10-03)
+
+* Carried with the coordinated fleet release. No behaviour changed.
+
 ## 1.11.0 (2026-09-10)
 
 * Align runtime version metadata and sibling dependency floors with the coordinated 1.11.0 release.

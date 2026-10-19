@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from z4j_celerybeat.capabilities import DEFAULT_CAPABILITIES
 from z4j_celerybeat.scheduler import CeleryBeatSchedulerAdapter
 from z4j_core.errors import NotFoundError
 from z4j_core.models import CommandResult, Schedule, ScheduleKind
@@ -124,7 +123,7 @@ class TestProtocolConformance:
 
     def test_capabilities(self) -> None:
         adapter = CeleryBeatSchedulerAdapter(sources=[])
-        assert adapter.capabilities() == set(DEFAULT_CAPABILITIES)
+        assert adapter.capabilities() == {"list"}
 
 
 class TestList:

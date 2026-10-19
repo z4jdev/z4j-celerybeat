@@ -13,9 +13,10 @@ policy, and published advisories are maintained in the
 
 ## Security-critical surface
 
-This adapter inventories static Celery Beat configuration and, when
-django-celery-beat is present, executes authenticated create, update, toggle,
-trigger, and delete controls with the application's Django database access.
+This adapter inventories static Celery Beat configuration and, with a Celery
+app attached, triggers any listed entry on demand. When django-celery-beat is
+present it also executes authenticated create, update, toggle, and delete
+controls with the application's Django database access.
 Schedule argument mapping, backend selection, ORM mutation, and indeterminate
 timeouts are package-specific security surfaces; transport, redaction, and
 authorization policy remain owned by `z4j-core` and the brain.

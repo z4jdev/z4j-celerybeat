@@ -20,6 +20,10 @@ from z4j_core.models import (
     Schedule,
     refuse_unimplemented_overlap,
 )
+from z4j_core.schedule_external import (
+    EXTERNAL_SCHEDULE_MUTATION_CAPABILITY,
+    EXTERNAL_SCHEDULE_STABLE_SNAPSHOT_CAPABILITY,
+)
 
 from z4j_celerybeat._offload import (
     OffloadTimeoutError,
@@ -335,12 +339,14 @@ class CeleryBeatSchedulerAdapter:
         # heartbeat providers (isolated from the default executor). Mirrors
         # the z4j-celery action offload.
         try:
+            options = {"queue": schedule.queue} if schedule.queue else {}
             await offload(
                 self.celery_app.send_task,
                 schedule.task_name,
                 args=schedule.args,
                 kwargs=schedule.kwargs,
                 timeout=10.0,
+                **options,
             )
         except OffloadTimeoutError:
             # The publish may still have reached the broker; report
@@ -367,12 +373,51 @@ class CeleryBeatSchedulerAdapter:
     # Capabilities
     # ------------------------------------------------------------------
 
+    async def apply_external_mutation(
+        self,
+        *,
+        operation: str,
+        schedule_id: str | None,
+        expected: dict[str, Any] | None,
+        definition: dict[str, Any],
+    ) -> Schedule | None:
+        for source in self.sources:
+            if type(source) is DjangoCeleryBeatSource and source.is_available():
+                return await source.apply_external_mutation(
+                    operation=operation,
+                    schedule_id=schedule_id,
+                    expected=expected,
+                    definition=definition,
+                )
+        raise NotFoundError("native mutations require django-celery-beat")
+
     def capabilities(self) -> set[str]:
-        return set(DEFAULT_CAPABILITIES)
+        capabilities = {"list"}
+        if self.celery_app is not None:
+            capabilities.add("trigger_now")
+        if any(_supports_writes(source) for source in self.sources):
+            capabilities.update(DEFAULT_CAPABILITIES - {"trigger_now"})
+        if any(
+            type(source) is DjangoCeleryBeatSource and source.is_available()
+            for source in self.sources
+        ):
+            capabilities.add(EXTERNAL_SCHEDULE_MUTATION_CAPABILITY)
+        # Custom sources must not inherit an authority guarantee merely by
+        # implementing list_schedules. The built-ins read one joined database
+        # statement or one synchronous static mapping; either read failing
+        # aborts the entire inventory above.
+        if self.sources and all(
+            type(source) in {DjangoCeleryBeatSource, StaticBeatScheduleSource}
+            for source in self.sources
+        ):
+            capabilities.add(EXTERNAL_SCHEDULE_STABLE_SNAPSHOT_CAPABILITY)
+        return capabilities
 
 
 def _supports_writes(source: Any) -> bool:
     """True if the source advertises an editable backing store."""
+    if isinstance(source, StaticBeatScheduleSource):
+        return False
     is_available = getattr(source, "is_available", None)
     if is_available is None:
         return True

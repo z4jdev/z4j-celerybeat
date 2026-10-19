@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.13.0 (2026-10-19)
+
+- Complete native database schedule CRUD, source confirmation and static manual runs; preserve precise intervals and clocked one-shot behavior.
+
 ## 1.12.0 (2026-10-03)
 
 * Carried with the coordinated fleet release. No behaviour changed.

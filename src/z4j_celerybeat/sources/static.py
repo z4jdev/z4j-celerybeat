@@ -64,8 +64,12 @@ class StaticBeatScheduleSource:
         return [map_static_entry(name, dict(entry)) for name, entry in beat_schedule.items()]
 
     async def get_schedule(self, schedule_id: str) -> Schedule | None:
+        if schedule_id.startswith("dcb:"):
+            return None
         for schedule in await self.list_schedules():
-            if schedule_id in {schedule.external_id, schedule.name}:
+            if schedule_id == schedule.external_id or (
+                not schedule_id.startswith("static:") and schedule_id == schedule.name
+            ):
                 return schedule
         return None
 

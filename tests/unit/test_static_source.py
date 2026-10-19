@@ -94,3 +94,16 @@ class TestWritesUnsupported:
         source = StaticBeatScheduleSource(celery_app=fake_celery_app)
         result = await source.set_enabled("x", True)
         assert result.status == "failed"
+
+
+async def test_qualified_database_id_never_selects_a_static_name(fake_celery_app):
+    fake_celery_app.conf.beat_schedule = {
+        "dcb:123": {"task": "jobs.wrong", "schedule": 0.125},
+        "x" * 200: {"task": "jobs.long", "schedule": 1},
+    }
+    source = StaticBeatScheduleSource(celery_app=fake_celery_app)
+    assert await source.get_schedule("dcb:123") is None
+    rows = await source.list_schedules()
+    assert rows[0].expression == "0.125"
+    assert all(len(row.external_id) <= 200 for row in rows)
+    assert (await source.get_schedule(rows[0].external_id)).name == "dcb:123"

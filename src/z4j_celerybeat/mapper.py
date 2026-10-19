@@ -24,7 +24,10 @@ Pure-Python: no Django imports here. The dcb source module imports
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -54,6 +57,39 @@ def map_periodic_task(periodic: Any, project_id: UUID | None = None) -> Schedule
     are listed in the test fixtures.
     """
     kind, expression, timezone = _resolve_kind_and_expression(periodic)
+    # Preserve native configuration the common model does not expose, so a
+    # compare-and-set cannot silently overwrite an intervening admin edit.
+    native = {
+        key: str(getattr(periodic, key, None))
+        for key in (
+            "args",
+            "kwargs",
+            "headers",
+            "queue",
+            "exchange",
+            "routing_key",
+            "priority",
+            "expires",
+            "expire_seconds",
+            "start_time",
+            "one_off",
+            "interval_id",
+            "crontab_id",
+            "clocked_id",
+            "solar_id",
+        )
+    }
+    metadata: dict[str, Any] = {}
+    interval = getattr(periodic, "interval", None)
+    if interval is not None:
+        native["interval_every"] = str(interval.every)
+        native["interval_period"] = str(interval.period)
+    if kind == ScheduleKind.SOLAR:
+        metadata["solar"] = {
+            "latitude": str(getattr(periodic.solar, "latitude", "")),
+            "longitude": str(getattr(periodic.solar, "longitude", "")),
+        }
+        native["solar_coordinates"] = json.dumps(metadata["solar"], sort_keys=True)
     return Schedule(
         id=_placeholder_uuid(),
         project_id=project_id or _placeholder_uuid(),
@@ -71,8 +107,10 @@ def map_periodic_task(periodic: Any, project_id: UUID | None = None) -> Schedule
         last_run_at=getattr(periodic, "last_run_at", None),
         next_run_at=None,  # django-celery-beat does not store this; brain computes it
         total_runs=int(getattr(periodic, "total_run_count", 0)),
-        external_id=str(getattr(periodic, "id", getattr(periodic, "pk", "")) or ""),
-        metadata={},
+        external_id=f"dcb:{getattr(periodic, 'id', getattr(periodic, 'pk', ''))}",
+        source="celery-beat:database",
+        source_hash=hashlib.sha256(json.dumps(native, sort_keys=True).encode()).hexdigest(),
+        metadata=metadata,
         created_at=getattr(periodic, "date_changed", None) or datetime.now(UTC),
         updated_at=getattr(periodic, "date_changed", None) or datetime.now(UTC),
     )
@@ -85,7 +123,11 @@ def _resolve_kind_and_expression(periodic: Any) -> tuple[ScheduleKind, str, str]
         every = int(getattr(interval, "every", 0))
         period = str(getattr(interval, "period", "seconds"))
         seconds = _interval_to_seconds(every, period)
-        return ScheduleKind.INTERVAL, str(seconds), "UTC"
+        return (
+            ScheduleKind.INTERVAL,
+            format(seconds, "f") if isinstance(seconds, Decimal) else str(seconds),
+            "UTC",
+        )
 
     crontab = getattr(periodic, "crontab", None)
     if crontab is not None:
@@ -119,16 +161,8 @@ def _resolve_kind_and_expression(periodic: Any) -> tuple[ScheduleKind, str, str]
     return ScheduleKind.INTERVAL, "0", "UTC"
 
 
-def _interval_to_seconds(every: int, period: str) -> int:
-    """Convert a django-celery-beat interval to whole seconds.
-
-    A ``microseconds`` period is the only one that can collapse to
-    zero - and a zero-second interval would tell every downstream
-    consumer "this schedule never fires." We round it up to a
-    minimum of 1 second so the schedule still has a sensible
-    representation, while preserving "this is sub-second" via the
-    metadata downstream.
-    """
+def _interval_to_seconds(every: int, period: str) -> int | Decimal:
+    """Preserve the native cadence, including fractional seconds."""
     multipliers = {
         "seconds": 1,
         "minutes": 60,
@@ -137,10 +171,7 @@ def _interval_to_seconds(every: int, period: str) -> int:
     }
     period_lc = period.lower()
     if period_lc == "microseconds":
-        # Anything <1s rounds up to 1s. Truly sub-second cron-style
-        # schedules are not a thing django-celery-beat supports
-        # in practice (the worker tick is much slower than that).
-        return max(1, (every + 999_999) // 1_000_000)
+        return (Decimal(every) / Decimal(1_000_000)).normalize()
     return every * multipliers.get(period_lc, 1)
 
 
@@ -213,7 +244,8 @@ def map_static_entry(
         last_run_at=None,
         next_run_at=None,
         total_runs=0,
-        external_id=name,
+        external_id=f"static:{hashlib.sha256(name.encode()).hexdigest()}",
+        source="celery-beat:static",
         metadata={"source": "static"},
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -227,13 +259,17 @@ def _resolve_static_schedule(value: Any) -> tuple[ScheduleKind, str, str]:
 
     # Plain integer / float → interval seconds.
     if isinstance(value, (int, float)):
-        return ScheduleKind.INTERVAL, str(int(value)), "UTC"
+        return ScheduleKind.INTERVAL, str(value), "UTC"
 
     # ``datetime.timedelta`` → interval seconds.
     from datetime import timedelta
 
     if isinstance(value, timedelta):
-        return ScheduleKind.INTERVAL, str(int(value.total_seconds())), "UTC"
+        return (
+            ScheduleKind.INTERVAL,
+            format(Decimal(str(value.total_seconds())).normalize(), "f"),
+            "UTC",
+        )
 
     # Celery ``crontab(...)`` instance: it has minute / hour / day_of_week / etc.
     if hasattr(value, "_orig_minute"):

@@ -7,9 +7,12 @@
 The Celery Beat scheduler adapter for [z4j](https://z4j.com).
 
 Surfaces periodic / crontab / one-shot Celery schedules on the
-dashboard's Schedules page, read, create, update, enable, disable,
-trigger, delete. Supports both Celery's static `app.conf.beat_schedule`
-and the database-backed `django_celery_beat.models.PeriodicTask`.
+dashboard's Schedules page. Database-backed `django_celery_beat.models.PeriodicTask`
+supports native writes; Celery's static `app.conf.beat_schedule` is read-only.
+
+Native writes and source confirmation need the z4j server, `z4j-core`,
+`z4j-bare` and `z4j-celerybeat` from the same release, plus the Beat producer
+setup described under Install.
 
 ## Compatibility
 
@@ -41,7 +44,7 @@ dashboard hides buttons it can't honor.
 ## Install
 
 ```bash
-pip install z4j-celery z4j-celerybeat
+pip install z4j-django z4j-celery 'z4j-celerybeat[django]'
 ```
 
 ### With django-celery-beat (most Django projects)
@@ -55,7 +58,13 @@ INSTALLED_APPS = [
 ]
 ```
 
-After the agent connects, its inventory snapshot includes existing
+Start a long-lived `celery beat` process with
+`--scheduler django_celery_beat.schedulers:DatabaseScheduler`, the same Django
+settings and `Z4J_*` credentials. The Celery worker bootstrap alone registers
+the engine, not a Beat scheduler. Run only one Beat instance for a given
+schedule database unless you provide an upstream leader-election solution.
+
+After the scheduler agent connects, its inventory snapshot includes existing
 `PeriodicTask` rows. Dashboard changes write through to the database. Saves
 and deletes in a process where the adapter's hooks are connected are reported
 best-effort through Django signals; later inventory snapshots reconcile the
@@ -89,6 +98,13 @@ install_agent(
 )
 ```
 
+Native changes return an accepted operation first; the dashboard reports
+completion after a full source snapshot confirms the result. A timeout or
+uncertain result requires checking the native row before issuing a new request.
+Clocked schedules are one-shot and require an offset-aware timestamp. Solar
+schedules retain their coordinates; the common dashboard form does not create
+solar definitions. See the guide for supported fields and source identities.
+
 ## Pairs with
 
 - [`z4j-celery`](https://github.com/z4jdev/z4j-celery), engine adapter
@@ -99,8 +115,8 @@ install_agent(
   semantics; reporting their post-save/post-delete signals to z4j is
   best-effort and does not roll back those writes.
 - Dashboard controls execute in the agent process through the Django ORM. A
-  mutation that exceeds its 10-second timeout is reported as indeterminate
-  because its worker thread may still commit it.
+  database mutation that exceeds its 15-second timeout is reported as
+  indeterminate because its worker thread may still commit it.
 
 ## Documentation
 
@@ -108,7 +124,7 @@ Full docs at [docs.z4j.com/schedulers/celery-beat/](https://docs.z4j.com/schedul
 
 ## License
 
-Apache-2.0, see [LICENSE](LICENSE).
+Apache-2.0, see [LICENSE](https://github.com/z4jdev/z4j-celerybeat/blob/main/LICENSE).
 
 ## Links
 
@@ -116,5 +132,5 @@ Apache-2.0, see [LICENSE](LICENSE).
 - Documentation: https://docs.z4j.com
 - PyPI: https://pypi.org/project/z4j-celerybeat/
 - Issues: https://github.com/z4jdev/z4j-celerybeat/issues
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Security: security@z4j.com (see [SECURITY.md](SECURITY.md))
+- Changelog: [CHANGELOG.md](https://github.com/z4jdev/z4j-celerybeat/blob/main/CHANGELOG.md)
+- Security: security@z4j.com (see [SECURITY.md](https://github.com/z4jdev/z4j-celerybeat/blob/main/SECURITY.md))
